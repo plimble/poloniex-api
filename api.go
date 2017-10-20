@@ -80,7 +80,7 @@ func retry(attempts int, sleep time.Duration, callback func() error) (err error)
 }
 
 func (p *Poloniex) isSubscribed(code string) bool {
-	ok := p.subscribedTo[code]
+	_, ok := p.subscribedTo[code]
 	return ok
 }
 
