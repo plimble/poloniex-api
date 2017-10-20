@@ -1,5 +1,5 @@
 # Go Poloniex API wrapper
-This API should be a complete wrapper for the [Poloniex api](https://poloniex.com/support/api/, including the public, private and websocket APIs.
+This API should be a complete wrapper for the [Poloniex api](https://poloniex.com/support/api/), including the public, private and websocket APIs.
 
 To use create a copy of config-example.json and fill in your API key and secret.
 
