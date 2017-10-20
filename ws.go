@@ -2,7 +2,10 @@ package poloniex
 
 import (
 	"encoding/json"
+	"log"
+	"time"
 
+	"github.com/k0kubun/pp"
 	"gopkg.in/beatgammit/turnpike.v2"
 )
 
@@ -20,55 +23,44 @@ type (
 		DailyLow      float64
 	}
 
-	WSOrder struct {
-		Rate   float64 `json:"rate,string"`
-		Type   string  `json:"type"`
-		Amount float64 `json:"amount,string"`
-	}
 	WSTrade struct {
 		TradeID string
 		Rate    float64 `json:",string"`
 		Amount  float64 `json:",string"`
 		Type    string
 		Date    string
+		TS      time.Time
 	}
 	WSOrderOrTrade []struct {
-		Data json.RawMessage
+		Data WSTrade
 		Type string
 	}
 )
 
+//SubscribeTicker subscribes to the ticker feed
 func (p *Poloniex) SubscribeTicker(ch chan WSTicker) {
 	p.InitWS()
 	p.subscribedTo["ticker"] = true
 	p.ws.Subscribe("ticker", p.makeTickerHandler(ch))
 }
 
-func (p *Poloniex) SubscribeOrder(code string, handler turnpike.EventHandler) {
+//SubsribeOrder subscribes to the order and trade feed
+func (p *Poloniex) SubscribeOrder(code string, ch chan WSOrderOrTrade) {
 	p.InitWS()
 	p.subscribedTo[code] = true
-	p.ws.Subscribe(code, handler)
+	p.ws.Subscribe(code, p.makeOrderHandler(code, ch))
 }
 
-func (p *Poloniex) SubscribeTrollbox(handler turnpike.EventHandler) {
-	p.InitWS()
-	p.subscribedTo["trollbox"] = true
-	p.ws.Subscribe("trollbox", handler)
-}
-
+//UnsubscribeTicker.... I think you can guess
 func (p *Poloniex) UnsubscribeTicker() {
 	p.InitWS()
 	p.Unsubscribe("ticker")
 }
 
+//UnsubscribeOrder.... I think you can guess
 func (p *Poloniex) UnsubscribeOrder(code string) {
 	p.InitWS()
 	p.Unsubscribe(code)
-}
-
-func (p *Poloniex) UnsubscribeTrollbox() {
-	p.InitWS()
-	p.Unsubscribe("trollbox")
 }
 
 func (p *Poloniex) Unsubscribe(code string) {
@@ -79,6 +71,7 @@ func (p *Poloniex) Unsubscribe(code string) {
 	}
 }
 
+//makeTickerHandler takes a WS Order or Trade and send it over the channel sepcified by the user
 func (p *Poloniex) makeTickerHandler(ch chan WSTicker) turnpike.EventHandler {
 	return func(p []interface{}, n map[string]interface{}) {
 		t := WSTicker{
@@ -97,7 +90,32 @@ func (p *Poloniex) makeTickerHandler(ch chan WSTicker) turnpike.EventHandler {
 	}
 }
 
-func (p *Poloniex) makeOrderHandler(ch chan WSOrder) turnpike.EventHandler {
+//makeOrderHandler takes a WS Order or Trade and send it over the channel sepcified by the user
+func (p *Poloniex) makeOrderHandler(coin string, ch chan WSOrderOrTrade) turnpike.EventHandler {
 	return func(p []interface{}, n map[string]interface{}) {
+		b, err := json.Marshal(p)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		oot := WSOrderOrTrade{}
+		err = json.Unmarshal(b, &oot)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		ootTmp := WSOrderOrTrade{}
+		for _, o := range oot {
+			if o.Type == "newTrade" {
+				pp.Println("Date:", o.Data.Date)
+				d, err := time.Parse("2006-01-02 15:04:05", o.Data.Date)
+				if err != nil {
+					log.Println(err)
+				}
+				o.Data.TS = d
+			}
+			ootTmp = append(ootTmp, o)
+		}
+		ch <- ootTmp
 	}
 }

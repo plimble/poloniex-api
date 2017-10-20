@@ -111,7 +111,7 @@ func NewWithConfig(configfile string) *Poloniex {
 	if err != nil {
 		log.Fatalln(errors.Wrap(err, "reading "+configfile+" failed."))
 	}
-	err = json.Unmarshal(b, p)
+	err = json.Unmarshal(b, &p)
 	if err != nil {
 		log.Fatalln(errors.Wrap(err, "unmarshal of config failed."))
 	}
