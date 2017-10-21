@@ -64,10 +64,11 @@ func main() {
 package main
 
 import (
-	"fmt"
 	"log"
 
 	poloniex "github.com/pharrisee/poloniex-api"
+
+	"github.com/k0kubun/pp"
 )
 
 var (
@@ -76,10 +77,11 @@ var (
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	ch := make(chan poloniex.WSTicker)
-	p.SubscribeTicker(ch)
-	for oot := range ch {
-		fmt.Printf("%+v", oot)
+
+	ch := p.SubscribeOrder("BTC_ETH")
+	for ticker := range ch {
+		pp.Println(ticker)
 	}
 }
+
 ```
