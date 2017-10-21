@@ -79,8 +79,8 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	ch := p.SubscribeOrder("BTC_ETH")
-	for ticker := range ch {
-		pp.Println(ticker)
+	for orders := range ch {
+		pp.Println(orders)
 	}
 }
 
