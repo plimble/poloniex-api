@@ -64,19 +64,20 @@ func main() {
 package main
 
 import (
-	"fmt"
 	"log"
 
 	poloniex "github.com/pharrisee/poloniex-api"
+
+	"github.com/k0kubun/pp"
 )
 
 func main() {
 	p := poloniex.NewWithCredentials("Key goes here", "secret goes here")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	ch := make(chan poloniex.WSTicker)
-	p.SubscribeTicker(ch)
-	for oot := range ch {
-		fmt.Printf("%+v", oot)
+
+	ch := p.SubscribeOrder("BTC_ETH")
+	for orders := range ch {
+		pp.Println(orders)
 	}
 }
 

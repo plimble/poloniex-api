@@ -10,6 +10,7 @@ import (
 )
 
 type (
+	//WSTicker describes a ticker item
 	WSTicker struct {
 		Pair          string
 		Last          float64
@@ -23,6 +24,10 @@ type (
 		DailyLow      float64
 	}
 
+	// WSTickerChan is a onduit through which WSTicker items are sent
+	WSTickerChan chan WSTicker
+
+	//WSTrade describes a trade, a new order, or an order update
 	WSTrade struct {
 		TradeID string
 		Rate    float64 `json:",string"`
@@ -31,38 +36,58 @@ type (
 		Date    string
 		TS      time.Time
 	}
-	WSOrderOrTrade []struct {
+
+	//WSOrderOrTrade is a slice of WSTrades with an indicator of the type (trade, new order, update order)
+	WSOrderOrTrade struct {
+		Seq    int64
+		Orders WSOrders
+	}
+
+	WSOrders []struct {
 		Data WSTrade
 		Type string
 	}
+
+	// WSOrderOrTradeChan is a onduit through which WSTicker items are sent
+	WSOrderOrTradeChan chan WSOrderOrTrade
 )
 
-//SubscribeTicker subscribes to the ticker feed
-func (p *Poloniex) SubscribeTicker(ch chan WSTicker) {
+const (
+	//SENTINEL is used to mark items without a sequence number
+	SENTINEL = int64(-1)
+)
+
+//SubscribeTicker subscribes to the ticker feed and returns a channel over which it will send updates
+func (p *Poloniex) SubscribeTicker() WSTickerChan {
 	p.InitWS()
 	p.subscribedTo["ticker"] = true
+	ch := make(WSTickerChan)
 	p.ws.Subscribe("ticker", p.makeTickerHandler(ch))
+	return ch
 }
 
-//SubsribeOrder subscribes to the order and trade feed
-func (p *Poloniex) SubscribeOrder(code string, ch chan WSOrderOrTrade) {
+//SubscribeOrder subscribes to the order and trade feed and returns a channel over which it will send updates
+func (p *Poloniex) SubscribeOrder(code string) WSOrderOrTradeChan {
 	p.InitWS()
 	p.subscribedTo[code] = true
+	ch := make(WSOrderOrTradeChan)
 	p.ws.Subscribe(code, p.makeOrderHandler(code, ch))
+	return ch
 }
 
-//UnsubscribeTicker.... I think you can guess
+//UnsubscribeTicker ... I think you can guess
 func (p *Poloniex) UnsubscribeTicker() {
 	p.InitWS()
 	p.Unsubscribe("ticker")
 }
 
-//UnsubscribeOrder.... I think you can guess
+//UnsubscribeOrder ... I think you can guess
 func (p *Poloniex) UnsubscribeOrder(code string) {
 	p.InitWS()
 	p.Unsubscribe(code)
 }
 
+//Unsubscribe from the relevant feed
 func (p *Poloniex) Unsubscribe(code string) {
 	p.InitWS()
 	if p.isSubscribed(code) {
@@ -91,20 +116,24 @@ func (p *Poloniex) makeTickerHandler(ch chan WSTicker) turnpike.EventHandler {
 }
 
 //makeOrderHandler takes a WS Order or Trade and send it over the channel sepcified by the user
-func (p *Poloniex) makeOrderHandler(coin string, ch chan WSOrderOrTrade) turnpike.EventHandler {
+func (p *Poloniex) makeOrderHandler(coin string, ch WSOrderOrTradeChan) turnpike.EventHandler {
 	return func(p []interface{}, n map[string]interface{}) {
+		seq := int64(SENTINEL)
+		if s, ok := n["seq"]; ok {
+			seq = int64(s.(float64))
+		}
 		b, err := json.Marshal(p)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		oot := WSOrderOrTrade{}
+		oot := WSOrders{}
 		err = json.Unmarshal(b, &oot)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		ootTmp := WSOrderOrTrade{}
+		ootTmp := WSOrders{}
 		for _, o := range oot {
 			if o.Type == "newTrade" {
 				pp.Println("Date:", o.Data.Date)
@@ -116,6 +145,7 @@ func (p *Poloniex) makeOrderHandler(coin string, ch chan WSOrderOrTrade) turnpik
 			}
 			ootTmp = append(ootTmp, o)
 		}
-		ch <- ootTmp
+		o := WSOrderOrTrade{Seq: seq, Orders: ootTmp}
+		ch <- o
 	}
 }
