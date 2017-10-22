@@ -70,11 +70,8 @@ import (
 	poloniex "github.com/pharrisee/poloniex-api"
 )
 
-var (
-	p = poloniex.New("../config.json")
-)
-
 func main() {
+	p := poloniex.NewWithCredentials("Key goes here", "secret goes here")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	ch := make(chan poloniex.WSTicker)
 	p.SubscribeTicker(ch)
@@ -82,4 +79,5 @@ func main() {
 		fmt.Printf("%+v", oot)
 	}
 }
+
 ```
