@@ -7,6 +7,7 @@ This API should be a complete wrapper for the [Poloniex api](https://poloniex.co
 go get -u github.com/pharrisee/poloniex-api
 ```
 
+## Usage
 To use create a copy of config-example.json and fill in your API key and secret.
 
 ```json
