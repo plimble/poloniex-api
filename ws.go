@@ -3,6 +3,7 @@ package poloniex
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/k0kubun/pp"
@@ -102,15 +103,15 @@ func (p *Poloniex) makeTickerHandler(ch chan WSTicker) turnpike.EventHandler {
 	return func(p []interface{}, n map[string]interface{}) {
 		t := WSTicker{
 			Pair:          p[0].(string),
-			Last:          f(p[1]),
-			Ask:           f(p[2]),
-			Bid:           f(p[3]),
-			PercentChange: f(p[4]).Mul(decimal.NewFromFloat(100.0)),
-			BaseVolume:    f(p[5]),
-			QuoteVolume:   f(p[6]),
-			IsFrozen:      !f(p[7]).Equal(decimal.NewFromFloat(0.0)),
-			DailyHigh:     f(p[8]),
-			DailyLow:      f(p[9]),
+			Last:          toDecimal(p[1]),
+			Ask:           toDecimal(p[2]),
+			Bid:           toDecimal(p[3]),
+			PercentChange: toDecimal(p[4]).Mul(decimal.NewFromFloat(100.0)),
+			BaseVolume:    toDecimal(p[5]),
+			QuoteVolume:   toDecimal(p[6]),
+			IsFrozen:      !toDecimal(p[7]).Equal(decimal.NewFromFloat(0.0)),
+			DailyHigh:     toDecimal(p[8]),
+			DailyLow:      toDecimal(p[9]),
 		}
 		ch <- t
 	}
@@ -119,9 +120,13 @@ func (p *Poloniex) makeTickerHandler(ch chan WSTicker) turnpike.EventHandler {
 //makeOrderHandler takes a WS Order or Trade and send it over the channel sepcified by the user
 func (p *Poloniex) makeOrderHandler(coin string, ch WSOrderOrTradeChan) turnpike.EventHandler {
 	return func(p []interface{}, n map[string]interface{}) {
-		seq := int64(SENTINEL)
+		seq := SENTINEL
 		if s, ok := n["seq"]; ok {
-			seq = f(s).IntPart()
+			if i, err := strconv.Atoi(s.(string)); err == nil {
+				seq = int64(i)
+			} else {
+				seq = SENTINEL
+			}
 		}
 		b, err := json.Marshal(p)
 		if err != nil {
