@@ -8,22 +8,23 @@ import (
 
 	"github.com/franela/goreq"
 	"github.com/k0kubun/pp"
+	"github.com/shopspring/decimal"
 )
 
 type (
 	Ticker      map[string]TickerEntry
 	TickerEntry struct {
-		Last        float64 `json:",string"`
-		Ask         float64 `json:"lowestAsk,string"`
-		Bid         float64 `json:"highestBid,string"`
-		Change      float64 `json:"percentChange,string"`
-		BaseVolume  float64 `json:"baseVolume,string"`
-		QuoteVolume float64 `json:"quoteVolume,string"`
-		IsFrozen    int64   `json:"isFrozen,string"`
+		Last        decimal.Decimal `json:",string"`
+		Ask         decimal.Decimal `json:"lowestAsk,string"`
+		Bid         decimal.Decimal `json:"highestBid,string"`
+		Change      decimal.Decimal `json:"percentChange,string"`
+		BaseVolume  decimal.Decimal `json:"baseVolume,string"`
+		QuoteVolume decimal.Decimal `json:"quoteVolume,string"`
+		IsFrozen    int64           `json:"isFrozen,string"`
 	}
 
 	DailyVolume          map[string]DailyVolumeEntry
-	DailyVolumeEntry     map[string]float64
+	DailyVolumeEntry     map[string]decimal.Decimal
 	DailyVolumeTemp      map[string]interface{}
 	DailyVolumeEntryTemp map[string]interface{}
 
@@ -33,8 +34,8 @@ type (
 		IsFrozen bool
 	}
 	Order struct {
-		Rate   float64
-		Amount float64
+		Rate   decimal.Decimal
+		Amount decimal.Decimal
 	}
 
 	OrderBookTemp struct {
@@ -51,28 +52,28 @@ type (
 		ID     int64 `json:"globalTradeID"`
 		Date   string
 		Type   string
-		Rate   float64 `json:",string"`
-		Amount float64 `json:",string"`
-		Total  float64 `json:",string"`
+		Rate   decimal.Decimal `json:",string"`
+		Amount decimal.Decimal `json:",string"`
+		Total  decimal.Decimal `json:",string"`
 	}
 
 	ChartData      []ChartDataEntry
 	ChartDataEntry struct {
 		Date            int64
-		High            float64
-		Low             float64
-		Open            float64
-		Close           float64
-		Volume          float64
-		QuoteVolume     float64
-		WeightedAverage float64
+		High            decimal.Decimal
+		Low             decimal.Decimal
+		Open            decimal.Decimal
+		Close           decimal.Decimal
+		Volume          decimal.Decimal
+		QuoteVolume     decimal.Decimal
+		WeightedAverage decimal.Decimal
 	}
 
 	Currencies map[string]Currency
 	Currency   struct {
 		Name           string
-		TxFee          float64 `json:",string"`
-		MinConf        float64
+		TxFee          decimal.Decimal `json:",string"`
+		MinConf        decimal.Decimal
 		DepositAddress string
 		Disabled       int64
 		Delisted       int64
@@ -84,10 +85,10 @@ type (
 		Demands []LoanOrder
 	}
 	LoanOrder struct {
-		Rate     float64 `json:",string"`
-		Amount   float64 `json:",string"`
-		RangeMin float64
-		RangeMax float64
+		Rate     decimal.Decimal `json:",string"`
+		Amount   decimal.Decimal `json:",string"`
+		RangeMin decimal.Decimal
+		RangeMax decimal.Decimal
 	}
 )
 
@@ -228,21 +229,6 @@ func tempToOrderBook(obt OrderBookTemp) (ob OrderBook) {
 		ob.Bids = append(ob.Bids, o)
 	}
 	return
-}
-
-func floatCmp(a, b interface{}) int {
-	fa := f(a)
-	fb := f(b)
-	if fa < fb {
-		return -1
-	} else if fa > fb {
-		return 1
-	}
-	return 0
-}
-
-func reverseFloatCmp(a, b interface{}) int {
-	return floatCmp(a, b) * -1
 }
 
 func (p *Poloniex) public(command string, params url.Values, retval interface{}) (err error) {

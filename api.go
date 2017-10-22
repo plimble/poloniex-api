@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 
 	"gopkg.in/beatgammit/turnpike.v2"
 )
@@ -139,4 +142,27 @@ func trace(s string) (string, time.Time) {
 func un(s string, startTime time.Time) {
 	elapsed := time.Since(startTime)
 	log.Printf("trace end: %s, elapsed %f secs\n", s, elapsed.Seconds())
+}
+
+func f(i interface{}) decimal.Decimal {
+	maxFloat := decimal.NewFromFloat(math.MaxFloat64)
+	switch i := i.(type) {
+	case string:
+		a, err := strconv.ParseFloat(i, 64)
+		if err != nil {
+			return maxFloat
+		}
+		return decimal.NewFromFloat(a)
+	case float64:
+		return decimal.NewFromFloat(i)
+	case int64:
+		return decimal.NewFromFloat(float64(i))
+	case json.Number:
+		a, err := i.Float64()
+		if err != nil {
+			return maxFloat
+		}
+		return decimal.NewFromFloat(a)
+	}
+	return maxFloat
 }

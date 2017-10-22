@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/franela/goreq"
+	"github.com/shopspring/decimal"
 )
 
 type (
@@ -24,9 +25,9 @@ type (
 
 	Balances map[string]Balance
 	Balance  struct {
-		Available float64 `json:",string"`
-		OnOrders  float64 `json:"onOrders,string"`
-		BTCValue  float64 `json:"btcValue,string"`
+		Available decimal.Decimal `json:",string"`
+		OnOrders  decimal.Decimal `json:"onOrders,string"`
+		BTCValue  decimal.Decimal `json:"btcValue,string"`
 	}
 
 	AccountBalancesTemp struct {
@@ -36,9 +37,9 @@ type (
 	}
 
 	AccountBalances struct {
-		Exchange map[string]float64
-		Margin   map[string]float64
-		Lending  map[string]float64
+		Exchange map[string]decimal.Decimal
+		Margin   map[string]decimal.Decimal
+		Lending  map[string]decimal.Decimal
 	}
 
 	Addresses map[string]string
@@ -50,7 +51,7 @@ type (
 	Deposit struct {
 		Currency      string
 		Address       string
-		Amount        float64 `json:",string"`
+		Amount        decimal.Decimal `json:",string"`
 		Confirmations int64
 		TXID          string `json:"txid"`
 		Timestamp     int64
@@ -60,7 +61,7 @@ type (
 		WithdrawalNumber int64 `json:"withdrawalNumber"`
 		Currency         string
 		Address          string
-		Amount           float64 `json:",string"`
+		Amount           decimal.Decimal `json:",string"`
 		Timestamp        int64
 		Status           string
 	}
@@ -69,34 +70,34 @@ type (
 	OpenOrder  struct {
 		OrderNumber int64 `json:",string"`
 		Type        string
-		Rate        float64 `json:",string"`
-		Amount      float64 `json:",string"`
-		Total       float64 `json:",string"`
+		Rate        decimal.Decimal `json:",string"`
+		Amount      decimal.Decimal `json:",string"`
+		Total       decimal.Decimal `json:",string"`
 	}
 	OpenOrdersAll map[string]OpenOrders
 
 	PrivateTradeHistory      []PrivateTradeHistoryEntry
 	PrivateTradeHistoryEntry struct {
 		Date        string
-		Rate        float64 `json:",string"`
-		Amount      float64 `json:",string"`
-		Total       float64 `json:",string"`
-		OrderNumber int64   `json:",string"`
+		Rate        decimal.Decimal `json:",string"`
+		Amount      decimal.Decimal `json:",string"`
+		Total       decimal.Decimal `json:",string"`
+		OrderNumber int64           `json:",string"`
 		Type        string
 	}
 	PrivateTradeHistoryAll map[string]PrivateTradeHistory
 
 	OrderTrades []OrderTrade
 	OrderTrade  struct {
-		GlobalTradeID int64   `json:"globalTradeID"`
-		TradeID       int64   `json:"tradeID"`
-		CurrencyPair  string  `json:"currencyPair"`
-		Type          string  `json:"type"`
-		Rate          float64 `json:"rate,string"`
-		Amount        float64 `json:"amount,string"`
-		Total         float64 `json:"total,string"`
-		Fee           float64 `json:"fee,string"`
-		Date          string  `json:"date"`
+		GlobalTradeID int64           `json:"globalTradeID"`
+		TradeID       int64           `json:"tradeID"`
+		CurrencyPair  string          `json:"currencyPair"`
+		Type          string          `json:"type"`
+		Rate          decimal.Decimal `json:"rate,string"`
+		Amount        decimal.Decimal `json:"amount,string"`
+		Total         decimal.Decimal `json:"total,string"`
+		Fee           decimal.Decimal `json:"fee,string"`
+		Date          string          `json:"date"`
 	}
 
 	Buy struct {
@@ -104,11 +105,11 @@ type (
 		// ResultingTrades []ResultingTrade
 	}
 	ResultingTrade struct {
-		Amount  float64 `json:",string"`
-		Rate    float64 `json:",string"`
+		Amount  decimal.Decimal `json:",string"`
+		Rate    decimal.Decimal `json:",string"`
 		Date    string
-		Total   float64 `json:",string"`
-		TradeID string  `json:"tradeID"`
+		Total   decimal.Decimal `json:",string"`
+		TradeID string          `json:"tradeID"`
 		Type    string
 	}
 	Sell struct {
@@ -126,16 +127,16 @@ type (
 	}
 
 	FeeInfo struct {
-		MakerFee        float64 `json:"makerFee,string"`
-		TakerFee        float64 `json:"takerFee,string"`
-		ThirtyDayVolume float64 `json:"thirtyDayVolume,string"`
-		NextTier        float64 `json:"nextTier,string"`
+		MakerFee        decimal.Decimal `json:"makerFee,string"`
+		TakerFee        decimal.Decimal `json:"takerFee,string"`
+		ThirtyDayVolume decimal.Decimal `json:"thirtyDayVolume,string"`
+		NextTier        decimal.Decimal `json:"nextTier,string"`
 	}
 
 	AvailableAccountBalances struct {
-		Exchange map[string]float64
-		Margin   map[string]float64
-		Lending  map[string]float64
+		Exchange map[string]decimal.Decimal
+		Margin   map[string]decimal.Decimal
+		Lending  map[string]decimal.Decimal
 	}
 	AvailableAccountBalancesTemp struct {
 		Exchange map[string]json.Number
@@ -144,7 +145,7 @@ type (
 	}
 
 	TradableBalances map[string]TradableBalance
-	TradableBalance  map[string]float64
+	TradableBalance  map[string]decimal.Decimal
 
 	TradableBalancesTemp map[string]TradableBalanceTemp
 	TradableBalanceTemp  map[string]json.Number
@@ -155,12 +156,12 @@ type (
 	}
 
 	MarginAccountSummary struct {
-		TotalValue         float64 `json:"totalValue,string"`
-		ProfitLoss         float64 `json:"pl,string"`
-		LendingFees        float64 `json:"lendingFees,string"`
-		NetValue           float64 `json:"netValue,string"`
-		TotalBorrowedValue float64 `json:"totalBorrowedValue,string"`
-		CurrentMargin      float64 `json:"currentMargin,string"`
+		TotalValue         decimal.Decimal `json:"totalValue,string"`
+		ProfitLoss         decimal.Decimal `json:"pl,string"`
+		LendingFees        decimal.Decimal `json:"lendingFees,string"`
+		NetValue           decimal.Decimal `json:"netValue,string"`
+		TotalBorrowedValue decimal.Decimal `json:"totalBorrowedValue,string"`
+		CurrentMargin      decimal.Decimal `json:"currentMargin,string"`
 	}
 
 	LoanOffer struct {
@@ -170,9 +171,9 @@ type (
 
 	OpenLoanOffers map[string][]OpenLoanOffer
 	OpenLoanOffer  struct {
-		ID        int64   `json:"id"`
-		Rate      float64 `json:",string"`
-		Amount    float64 `json:",string"`
+		ID        int64           `json:"id"`
+		Rate      decimal.Decimal `json:",string"`
+		Amount    decimal.Decimal `json:",string"`
 		Duration  int64
 		Renewable bool
 		AutoRenew int64 `json:"autoRenew"`
@@ -186,14 +187,14 @@ type (
 	ActiveLoan struct {
 		ID        int64 `json:"id"`
 		Currency  string
-		Rate      float64 `json:",string"`
-		Amount    float64 `json:",string"`
+		Rate      decimal.Decimal `json:",string"`
+		Amount    decimal.Decimal `json:",string"`
 		Range     int64
 		Renewable bool
 		AutoRenew int64 `json:"autoRenew"`
 		Date      string
 		DateTaken time.Time
-		Fees      float64 `json:",string"`
+		Fees      decimal.Decimal `json:",string"`
 	}
 )
 
@@ -205,15 +206,15 @@ func (p *Poloniex) Balances() (balances Balances, err error) {
 func (p *Poloniex) AccountBalances() (balances AccountBalances, err error) {
 	b := AccountBalancesTemp{}
 	p.private("returnAvailableAccountBalances", nil, &b)
-	balances = AccountBalances{Exchange: map[string]float64{}, Margin: map[string]float64{}, Lending: map[string]float64{}}
+	balances = AccountBalances{Exchange: map[string]decimal.Decimal{}, Margin: map[string]decimal.Decimal{}, Lending: map[string]decimal.Decimal{}}
 	for k, v := range b.Exchange {
-		balances.Exchange[k], _ = strconv.ParseFloat(v, 64)
+		balances.Exchange[k], _ = decimal.NewFromString(v)
 	}
 	for k, v := range b.Margin {
-		balances.Margin[k], _ = strconv.ParseFloat(v, 64)
+		balances.Margin[k], _ = decimal.NewFromString(v)
 	}
 	for k, v := range b.Lending {
-		balances.Lending[k], _ = strconv.ParseFloat(v, 64)
+		balances.Lending[k], _ = decimal.NewFromString(v)
 	}
 	return
 }
@@ -284,7 +285,7 @@ func (p *Poloniex) CancelOrder(orderNumber int64) (success bool, err error) {
 	return
 }
 
-func (p *Poloniex) Buy(pair string, rate, amount float64) (buy Buy, err error) {
+func (p *Poloniex) Buy(pair string, rate, amount decimal.Decimal) (buy Buy, err error) {
 	params := url.Values{}
 	params.Add("currencyPair", pair)
 	params.Add("rate", fmt.Sprintf("%.8f", rate))
@@ -293,7 +294,7 @@ func (p *Poloniex) Buy(pair string, rate, amount float64) (buy Buy, err error) {
 	return
 }
 
-func (p *Poloniex) BuyPostOnly(pair string, rate, amount float64) (buy Buy, err error) {
+func (p *Poloniex) BuyPostOnly(pair string, rate, amount decimal.Decimal) (buy Buy, err error) {
 	params := url.Values{}
 	params.Add("currencyPair", pair)
 	params.Add("rate", fmt.Sprintf("%.8f", rate))
@@ -303,7 +304,7 @@ func (p *Poloniex) BuyPostOnly(pair string, rate, amount float64) (buy Buy, err 
 	return
 }
 
-func (p *Poloniex) Sell(pair string, rate, amount float64) (sell Sell, err error) {
+func (p *Poloniex) Sell(pair string, rate, amount decimal.Decimal) (sell Sell, err error) {
 	params := url.Values{}
 	params.Add("currencyPair", pair)
 	params.Add("rate", fmt.Sprintf("%.8f", rate))
@@ -312,7 +313,7 @@ func (p *Poloniex) Sell(pair string, rate, amount float64) (sell Sell, err error
 	return
 }
 
-func (p *Poloniex) SellPostOnly(pair string, rate, amount float64) (sell Sell, err error) {
+func (p *Poloniex) SellPostOnly(pair string, rate, amount decimal.Decimal) (sell Sell, err error) {
 	params := url.Values{}
 	params.Add("currencyPair", pair)
 	params.Add("rate", fmt.Sprintf("%.8f", rate))
@@ -322,7 +323,7 @@ func (p *Poloniex) SellPostOnly(pair string, rate, amount float64) (sell Sell, e
 	return
 }
 
-func (p *Poloniex) Move(orderNumber int64, rate float64) (moveOrder MoveOrder, err error) {
+func (p *Poloniex) Move(orderNumber int64, rate decimal.Decimal) (moveOrder MoveOrder, err error) {
 	params := url.Values{}
 	params.Add("orderNumber", fmt.Sprintf("%d", orderNumber))
 	params.Add("rate", fmt.Sprintf("%.8f", rate))
@@ -330,7 +331,7 @@ func (p *Poloniex) Move(orderNumber int64, rate float64) (moveOrder MoveOrder, e
 	return
 }
 
-func (p *Poloniex) MovePostOnly(orderNumber int64, rate float64) (moveOrder MoveOrder, err error) {
+func (p *Poloniex) MovePostOnly(orderNumber int64, rate decimal.Decimal) (moveOrder MoveOrder, err error) {
 	params := url.Values{}
 	params.Add("orderNumber", fmt.Sprintf("%d", orderNumber))
 	params.Add("rate", fmt.Sprintf("%.8f", rate))
@@ -338,7 +339,7 @@ func (p *Poloniex) MovePostOnly(orderNumber int64, rate float64) (moveOrder Move
 	return
 }
 
-func (p *Poloniex) Withdraw(currency string, amount float64, address string) (w Withdraw, err error) {
+func (p *Poloniex) Withdraw(currency string, amount decimal.Decimal, address string) (w Withdraw, err error) {
 	params := url.Values{}
 	params.Add("currency", currency)
 	params.Add("amount", fmt.Sprintf("%f", amount))
@@ -358,35 +359,17 @@ func (p *Poloniex) AvailableAccountBalances() (aab AvailableAccountBalances, err
 	if err != nil {
 		return
 	}
-	aab.Exchange = map[string]float64{}
-	aab.Margin = map[string]float64{}
-	aab.Lending = map[string]float64{}
+	aab.Exchange = map[string]decimal.Decimal{}
+	aab.Margin = map[string]decimal.Decimal{}
+	aab.Lending = map[string]decimal.Decimal{}
 	for k, v := range aabt.Exchange {
-		a, e := v.Float64()
-		if e != nil {
-			err = e
-			log.Println(e)
-			break
-		}
-		aab.Exchange[k] = a
+		aab.Exchange[k] = f(v)
 	}
 	for k, v := range aabt.Margin {
-		a, e := v.Float64()
-		if e != nil {
-			err = e
-			log.Println(e)
-			break
-		}
-		aab.Margin[k] = a
+		aab.Margin[k] = f(v)
 	}
 	for k, v := range aabt.Lending {
-		a, e := v.Float64()
-		if e != nil {
-			err = e
-			log.Println(e)
-			break
-		}
-		aab.Lending[k] = a
+		aab.Lending[k] = f(v)
 	}
 	return
 }
@@ -401,22 +384,16 @@ func (p *Poloniex) TradableBalances() (tb TradableBalances, err error) {
 	for k, v := range tbt {
 		tb[k] = TradableBalance{}
 		for kk, vv := range v {
-			f, e := vv.Float64()
-			if e != nil {
-				err = e
-				log.Println(e)
-				break
-			}
-			tb[k][kk] = f
+			tb[k][kk] = f(vv)
 		}
 	}
 	return
 }
 
-func (p *Poloniex) TransferBalance(currency string, amount float64, from string, to string) (tb TransferBalance, err error) {
+func (p *Poloniex) TransferBalance(currency string, amount decimal.Decimal, from string, to string) (tb TransferBalance, err error) {
 	params := url.Values{}
 	params.Add("currency", currency)
-	params.Add("amount", fmt.Sprintf("%.8f", amount))
+	params.Add("amount", amount.StringFixed(8))
 	params.Add("fromAccount", from)
 	params.Add("toAccount", to)
 	fmt.Printf("%+v", params)
@@ -429,11 +406,11 @@ func (p *Poloniex) MarginAccountSummary() (mas MarginAccountSummary, err error) 
 	return
 }
 
-func (p *Poloniex) LoanOffer(currency string, amount float64, duration int, renew bool, lendingRate float64) (loanOffer LoanOffer, err error) {
+func (p *Poloniex) LoanOffer(currency string, amount decimal.Decimal, duration int, renew bool, lendingRate decimal.Decimal) (loanOffer LoanOffer, err error) {
 	params := url.Values{}
 	params.Add("currency", currency)
-	params.Add("amount", fmt.Sprintf("%.8f", amount))
-	params.Add("lendingRate", fmt.Sprintf("%.8f", lendingRate/100.0))
+	params.Add("amount", amount.StringFixed(8))
+	params.Add("lendingRate", lendingRate.Div(decimal.NewFromFloat(100.0)).StringFixed(8))
 	params.Add("duration", fmt.Sprintf("%d", duration))
 	r := 0
 	if renew {
