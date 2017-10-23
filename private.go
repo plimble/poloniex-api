@@ -17,38 +17,44 @@ import (
 )
 
 type (
+	//Base is the common fields returned by a call tothepoloniex API
 	Base struct {
 		Error    string
 		Success  int64
 		Response string
 	}
 
+	//Balances are the complete balance map returned by the poloniex API
 	Balances map[string]Balance
-	Balance  struct {
+	//Balance is a single balance entry used in the Balances map
+	Balance struct {
 		Available decimal.Decimal `json:",string"`
 		OnOrders  decimal.Decimal `json:"onOrders,string"`
 		BTCValue  decimal.Decimal `json:"btcValue,string"`
 	}
 
-	AccountBalancesTemp struct {
+	accountBalancesTemp struct {
 		Exchange map[string]string
 		Margin   map[string]string
 		Lending  map[string]string
 	}
 
+	//Account holds the balances in the various wallet accounts
 	AccountBalances struct {
 		Exchange map[string]decimal.Decimal
 		Margin   map[string]decimal.Decimal
 		Lending  map[string]decimal.Decimal
 	}
 
+	//Addresses holds the various deposit addresses foreach coin
 	Addresses map[string]string
 
+	//DepositsWithdrawals holds the history of deposit and withdrawal
 	DepositsWithdrawals struct {
-		Deposits    []Deposit
-		Withdrawals []Withdrawal
+		Deposits    []deposit
+		Withdrawals []withdrawal
 	}
-	Deposit struct {
+	deposit struct {
 		Currency      string
 		Address       string
 		Amount        decimal.Decimal `json:",string"`
@@ -57,7 +63,7 @@ type (
 		Timestamp     int64
 		Status        string
 	}
-	Withdrawal struct {
+	withdrawal struct {
 		WithdrawalNumber int64 `json:"withdrawalNumber"`
 		Currency         string
 		Address          string
@@ -66,14 +72,17 @@ type (
 		Status           string
 	}
 
+	//OpenOrders is the list of open orders for the pair specified
 	OpenOrders []OpenOrder
-	OpenOrder  struct {
+	//OpenOrder is a singular entry used in the OpenOrders type
+	OpenOrder struct {
 		OrderNumber int64 `json:",string"`
 		Type        string
 		Rate        decimal.Decimal `json:",string"`
 		Amount      decimal.Decimal `json:",string"`
 		Total       decimal.Decimal `json:",string"`
 	}
+	//OpenOrdersAll is used for all pairs
 	OpenOrdersAll map[string]OpenOrders
 
 	PrivateTradeHistory      []PrivateTradeHistoryEntry
@@ -204,7 +213,7 @@ func (p *Poloniex) Balances() (balances Balances, err error) {
 }
 
 func (p *Poloniex) AccountBalances() (balances AccountBalances, err error) {
-	b := AccountBalancesTemp{}
+	b := accountBalancesTemp{}
 	p.private("returnAvailableAccountBalances", nil, &b)
 	balances = AccountBalances{Exchange: map[string]decimal.Decimal{}, Margin: map[string]decimal.Decimal{}, Lending: map[string]decimal.Decimal{}}
 	for k, v := range b.Exchange {
@@ -472,7 +481,7 @@ func (p *Poloniex) private(method string, params url.Values, retval interface{})
 	if params == nil {
 		params = url.Values{}
 	}
-	params.Set("nonce", p.GetNonce())
+	params.Set("nonce", p.getNonce())
 	params.Set("command", method)
 	postData := params.Encode()
 

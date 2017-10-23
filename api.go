@@ -37,6 +37,7 @@ const (
 	PRIVATEURI = "https://poloniex.com/tradingApi"
 )
 
+//InitWS is an attempt to work around the shitty poloniex WS api connection timeouts
 func (p *Poloniex) InitWS() {
 	if p.ws != nil {
 		return
@@ -87,11 +88,12 @@ func (p *Poloniex) isSubscribed(code string) bool {
 	return ok
 }
 
+//Debug turns on debugmode, which basically dumps all responses from the poloniex API REST server
 func (p *Poloniex) Debug() {
 	p.debug = true
 }
 
-func (p *Poloniex) GetNonce() string {
+func (p *Poloniex) getNonce() string {
 	p.nonce++
 	return fmt.Sprintf("%d", p.nonce)
 }
