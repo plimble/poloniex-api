@@ -111,7 +111,7 @@ func (p *Poloniex) DailyVolume() (dailyVolume DailyVolume, err error) {
 		default:
 			v := i.(map[string]interface{})
 			for kk, vv := range v {
-				dve[kk] = f(vv)
+				dve[kk] = toDecimal(vv)
 			}
 			dailyVolume[k] = dve
 		case string:
@@ -216,15 +216,15 @@ func tempToOrderBook(obt OrderBookTemp) (ob OrderBook) {
 	ob.Bids = []Order{}
 	for k := range asks {
 		v := asks[k]
-		price := f(v[0])
-		amount := f(v[1])
+		price := toDecimal(v[0])
+		amount := toDecimal(v[1])
 		o := Order{Rate: price, Amount: amount}
 		ob.Asks = append(ob.Asks, o)
 	}
 	for k := range bids {
 		v := bids[k]
-		price := f(v[0])
-		amount := f(v[1])
+		price := toDecimal(v[0])
+		amount := toDecimal(v[1])
 		o := Order{Rate: price, Amount: amount}
 		ob.Bids = append(ob.Bids, o)
 	}

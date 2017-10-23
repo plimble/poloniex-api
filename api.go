@@ -144,7 +144,7 @@ func un(s string, startTime time.Time) {
 	log.Printf("trace end: %s, elapsed %f secs\n", s, elapsed.Seconds())
 }
 
-func f(i interface{}) decimal.Decimal {
+func toDecimal(i interface{}) decimal.Decimal {
 	maxFloat := decimal.NewFromFloat(math.MaxFloat64)
 	switch i := i.(type) {
 	case string:

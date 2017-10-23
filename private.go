@@ -363,13 +363,13 @@ func (p *Poloniex) AvailableAccountBalances() (aab AvailableAccountBalances, err
 	aab.Margin = map[string]decimal.Decimal{}
 	aab.Lending = map[string]decimal.Decimal{}
 	for k, v := range aabt.Exchange {
-		aab.Exchange[k] = f(v)
+		aab.Exchange[k] = toDecimal(v)
 	}
 	for k, v := range aabt.Margin {
-		aab.Margin[k] = f(v)
+		aab.Margin[k] = toDecimal(v)
 	}
 	for k, v := range aabt.Lending {
-		aab.Lending[k] = f(v)
+		aab.Lending[k] = toDecimal(v)
 	}
 	return
 }
@@ -384,7 +384,7 @@ func (p *Poloniex) TradableBalances() (tb TradableBalances, err error) {
 	for k, v := range tbt {
 		tb[k] = TradableBalance{}
 		for kk, vv := range v {
-			tb[k][kk] = f(vv)
+			tb[k][kk] = toDecimal(vv)
 		}
 	}
 	return
