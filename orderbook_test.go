@@ -1,14 +1,13 @@
-package main
+package poloniex
 
 import (
 	"log"
 
 	"github.com/k0kubun/pp"
-	poloniex "gitlab.com/wmlph/poloniex-api"
 )
 
-func main() {
-	p := poloniex.NewPublicOnly()
+func ExampleOrderBook() {
+	p := NewPublicOnly()
 	ob, err := p.OrderBook("BTC_ETH")
 	if err != nil {
 		log.Fatalln(err)
