@@ -1,10 +1,13 @@
 package poloniex
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/olekukonko/tablewriter"
 
 	"github.com/k0kubun/pp"
 	"github.com/shopspring/decimal"
@@ -103,15 +106,15 @@ func (p *Poloniex) makeTickerHandler(ch chan WSTicker) turnpike.EventHandler {
 	return func(p []interface{}, n map[string]interface{}) {
 		t := WSTicker{
 			Pair:          p[0].(string),
-			Last:          toDecimal(p[1]),
-			Ask:           toDecimal(p[2]),
-			Bid:           toDecimal(p[3]),
-			PercentChange: toDecimal(p[4]).Mul(decimal.NewFromFloat(100.0)),
-			BaseVolume:    toDecimal(p[5]),
-			QuoteVolume:   toDecimal(p[6]),
-			IsFrozen:      !toDecimal(p[7]).Equal(decimal.NewFromFloat(0.0)),
-			DailyHigh:     toDecimal(p[8]),
-			DailyLow:      toDecimal(p[9]),
+			Last:          ToDecimal(p[1]),
+			Ask:           ToDecimal(p[2]),
+			Bid:           ToDecimal(p[3]),
+			PercentChange: ToDecimal(p[4]).Mul(decimal.NewFromFloat(100.0)),
+			BaseVolume:    ToDecimal(p[5]),
+			QuoteVolume:   ToDecimal(p[6]),
+			IsFrozen:      !ToDecimal(p[7]).Equal(decimal.NewFromFloat(0.0)),
+			DailyHigh:     ToDecimal(p[8]),
+			DailyLow:      ToDecimal(p[9]),
 		}
 		ch <- t
 	}
@@ -154,4 +157,32 @@ func (p *Poloniex) makeOrderHandler(coin string, ch WSOrderOrTradeChan) turnpike
 		o := WSOrderOrTrade{Seq: seq, Orders: ootTmp}
 		ch <- o
 	}
+}
+
+func (w WSTicker) String() string {
+	tf := map[bool]string{true: "True", false: "False"}
+	data := [][]string{
+		[]string{"Pair", w.Pair},
+		[]string{"Last", w.Last.StringFixed(8)},
+		[]string{"Ask", w.Ask.StringFixed(8)},
+		[]string{"Bid", w.Bid.StringFixed(8)},
+		[]string{"PercentChange", w.PercentChange.StringFixed(8)},
+		[]string{"BaseVolume", w.BaseVolume.StringFixed(8)},
+		[]string{"QuoteVolume", w.QuoteVolume.StringFixed(8)},
+		[]string{"IsFrozen", tf[w.IsFrozen]},
+		[]string{"DailyHigh", w.DailyHigh.StringFixed(8)},
+		[]string{"DailyLow", w.DailyLow.StringFixed(8)},
+	}
+	buf := bytes.NewBuffer([]byte{})
+	buf.WriteString("poloniex.WSTicker:\n")
+	tbl := tablewriter.NewWriter(buf)
+	tbl.SetHeader([]string{"Field", "Value"})
+	tbl.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_RIGHT})
+	tbl.SetColumnColor(
+		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiGreenColor},
+		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlueColor},
+	)
+	tbl.AppendBulk(data)
+	tbl.Render()
+	return buf.String()
 }
