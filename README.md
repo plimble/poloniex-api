@@ -19,73 +19,73 @@ To use create a copy of config-example.json and fill in your API key and secret.
 
 You can also pass your key/secret pair in code rather than creating a config.json.
 
-# Examples
+## Examples
 
-## Public API
+### Public API
 
 ```go
 package main
 
 import (
-	"log"
+    "log"
 
-	"github.com/k0kubun/pp"
-	poloniex "gitlab.com/wmlph/poloniex-api"
+    "github.com/k0kubun/pp"
+    poloniex "gitlab.com/wmlph/poloniex-api"
 )
 
 func main() {
-	p := poloniex.NewPublicOnly()
-	ob, err := p.OrderBook("BTC_ETH")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	pp.Println(ob.Asks[0], ob.Bids[0])
+    p := poloniex.NewPublicOnly()
+    ob, err := p.OrderBook("BTC_ETH")
+    if err != nil {
+        log.Fatalln(err)
+    }
+    pp.Println(ob.Asks[0], ob.Bids[0])
 }
 ```
 
-## Private API
+### Private API
 
 ```go
 package main
 
 import (
-	"fmt"
-	"log"
+    "fmt"
+    "log"
 
-	"gitlab.com/wmlph/poloniex-api"
+    "gitlab.com/wmlph/poloniex-api"
 )
 
 func main() {
-	p := poloniex.New("config.json")
-	balances, err := p.Balances()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fmt.Printf("%+v\n", balances)
+    p := poloniex.New("config.json")
+    balances, err := p.Balances()
+    if err != nil {
+        log.Fatalln(err)
+    }
+    fmt.Printf("%+v\n", balances)
 }
 ```
 
-## Websocket API
+### Websocket API
 
 ```go
 package main
 
 import (
-	"log"
+    "log"
 
-	poloniex "github.com/pharrisee/poloniex-api"
+    poloniex "github.com/pharrisee/poloniex-api"
 
-	"github.com/k0kubun/pp"
+    "github.com/k0kubun/pp"
 )
 
 func main() {
-	p := poloniex.NewWithCredentials("Key goes here", "secret goes here")
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+    p := poloniex.NewWithCredentials("Key goes here", "secret goes here")
+    log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
-	ch := p.SubscribeOrder("BTC_ETH")
-	for orders := range ch {
-		pp.Println(orders)
-	}
+    ch := p.SubscribeOrder("BTC_ETH")
+    for orders := range ch {
+        pp.Println(orders)
+    }
 }
 
 ```
