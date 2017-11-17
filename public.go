@@ -151,7 +151,6 @@ func (p *Poloniex) OrderBookAll() (orderBook OrderBookAll, err error) {
 }
 
 func (p *Poloniex) TradeHistory(in ...interface{}) (tradeHistory TradeHistory, err error) {
-	pp.Println(in)
 	params := url.Values{}
 	params.Add("currencyPair", in[0].(string))
 	if len(in) > 1 {
