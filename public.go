@@ -21,6 +21,7 @@ type (
 		BaseVolume  decimal.Decimal `json:"baseVolume,string"`
 		QuoteVolume decimal.Decimal `json:"quoteVolume,string"`
 		IsFrozen    int64           `json:"isFrozen,string"`
+		ID          int64           `json:"id"`
 	}
 
 	DailyVolume          map[string]DailyVolumeEntry
