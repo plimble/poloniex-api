@@ -1,10 +1,11 @@
 package poloniex
 
 import (
+	"encoding/json"
 	"log"
 	"strconv"
-	"time"
 
+	"github.com/k0kubun/pp"
 	"github.com/pkg/errors"
 )
 
@@ -34,47 +35,46 @@ type (
 		IsFrozen      bool
 		DailyHigh     float64
 		DailyLow      float64
+		PairID        int64
 	}
 
-	// WSTickerChan is a onduit through which WSTicker items are sent
-	WSTickerChan chan WSTicker
-
-	//WSTrade describes a trade, a new order, or an order update
-	WSTrade struct {
-		TradeID string
-		Rate    float64 `json:",string"`
-		Amount  float64 `json:",string"`
-		Type    string
-		Date    string
-		TS      time.Time
+	WSOrderbook struct {
 	}
-
-	//WSOrderOrTrade is a slice of WSTrades with an indicator of the type (trade, new order, update order)
-	WSOrderOrTrade struct {
-		Seq    int64
-		Orders WSOrders
-	}
-
-	WSOrders []struct {
-		Data WSTrade
-		Type string
-	}
-
-	// WSOrderOrTradeChan is a onduit through which WSTicker items are sent
-	WSOrderOrTradeChan chan WSOrderOrTrade
 )
 
 func (p *Poloniex) StartWS() {
-	p.dial()
 	go func() {
 		for {
-			_, message, err := p.ws.ReadMessage()
+			_, raw, err := p.ws.ReadMessage()
 			if err != nil {
-				p.dial()
 				log.Println("read:", err)
 				continue
 			}
-			p.Emit("message", string(message))
+			var message []interface{}
+			err = json.Unmarshal(raw, &message)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			chid := int64(message[0].(float64))
+			chids := toString(chid)
+			if chid > 100.0 && chid < 1000.0 {
+				// it's an orderbook
+				orderbook, err := p.parseOrderbook(message)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				p.Emit("orderbook", orderbook)
+			} else if chids == _ChannelIDs["ticker"] {
+				// it's a ticker
+				ticker, err := p.parseTicker(message)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				p.Emit("ticker", ticker)
+			}
 		}
 	}()
 }
@@ -114,4 +114,37 @@ func (p *Poloniex) Unsubscribe(chid string) error {
 	message := subscription{Command: "subscribe", Channel: chid}
 	delete(p.subscriptions, chid)
 	return p.sendWSMessage(message)
+}
+
+func (p *Poloniex) parseTicker(raw []interface{}) (WSTicker, error) {
+	wt := WSTicker{}
+	pp.Println(raw)
+	var rawInner []interface{}
+	if len(raw) <= 2 {
+		return wt, errors.New("cannot parse to ticker")
+	}
+	rawInner = raw[2].([]interface{})
+	marketID := int64(toFloat(rawInner[0]))
+	pair, ok := p.byID[marketID]
+	if !ok {
+		return wt, errors.New("cannot parse to ticker - invalid marketID")
+	}
+
+	wt.Pair = pair
+	wt.PairID = marketID
+	wt.Last = toFloat(rawInner[1])
+	wt.Ask = toFloat(rawInner[2])
+	wt.Bid = toFloat(rawInner[3])
+	wt.PercentChange = toFloat(rawInner[4])
+	wt.BaseVolume = toFloat(rawInner[5])
+	wt.QuoteVolume = toFloat(rawInner[6])
+	wt.IsFrozen = toFloat(rawInner[7]) != 0.0
+	wt.DailyHigh = toFloat(rawInner[8])
+	wt.DailyLow = toFloat(rawInner[9])
+
+	return wt, nil
+}
+
+func (p *Poloniex) parseOrderbook(raw []interface{}) (WSOrderbook, error) {
+	return WSOrderbook{}, nil
 }

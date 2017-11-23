@@ -6,13 +6,15 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/mariuspass/recws"
+
 	"github.com/chuckpreslar/emission"
 
-	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
 
@@ -21,12 +23,14 @@ type (
 	Poloniex struct {
 		Key           string
 		Secret        string
-		ws            *websocket.Conn
+		ws            recws.RecConn
 		debug         bool
 		nonce         int64
 		mutex         sync.Mutex
 		emitter       *emission.Emitter
 		subscriptions map[string]bool
+		byID          map[int64]string
+		byName        map[string]int64
 	}
 )
 
@@ -56,6 +60,10 @@ func NewWithCredentials(key, secret string) *Poloniex {
 	p.mutex = sync.Mutex{}
 	p.emitter = emission.NewEmitter()
 	p.subscriptions = map[string]bool{}
+	p.ws = recws.RecConn{}
+	h := http.Header{}
+	p.ws.Dial(apiURL, h)
+	p.getMarkets()
 
 	return p
 }
@@ -83,12 +91,31 @@ func NewPublicOnly() *Poloniex {
 	p.mutex = sync.Mutex{}
 	p.emitter = emission.NewEmitter()
 	p.subscriptions = map[string]bool{}
+	p.ws = recws.RecConn{}
+	h := http.Header{}
+	p.ws.Dial(apiURL, h)
+	p.getMarkets()
 	return p
 }
 
 // New is the legacy way to create a new client, here just to maintain api
 func New(configfile string) *Poloniex {
 	return NewWithConfig(configfile)
+}
+
+func (p *Poloniex) getMarkets() {
+	markets, err := p.Ticker()
+	if err != nil {
+		log.Fatalln("error getting markets for lookups", err)
+	}
+	byName := map[string]int64{}
+	byID := map[int64]string{}
+	for k, v := range markets {
+		byName[k] = v.ID
+		byID[v.ID] = k
+	}
+	p.byID = byID
+	p.byName = byName
 }
 
 func trace(s string) (string, time.Time) {
