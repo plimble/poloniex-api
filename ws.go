@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/k0kubun/pp"
+
 	"github.com/pkg/errors"
 )
 
@@ -118,7 +119,6 @@ func (p *Poloniex) Unsubscribe(chid string) error {
 
 func (p *Poloniex) parseTicker(raw []interface{}) (WSTicker, error) {
 	wt := WSTicker{}
-	pp.Println(raw)
 	var rawInner []interface{}
 	if len(raw) <= 2 {
 		return wt, errors.New("cannot parse to ticker")
@@ -146,5 +146,12 @@ func (p *Poloniex) parseTicker(raw []interface{}) (WSTicker, error) {
 }
 
 func (p *Poloniex) parseOrderbook(raw []interface{}) (WSOrderbook, error) {
+	wo := WSOrderbook{}
+	marketID := int64(toFloat(raw[0]))
+	pair, ok := p.byID[marketID]
+	if !ok {
+		return wo, errors.New("cannot parse to orderbook - invalid marketID")
+	}
+	pp.Println(pair, marketID)
 	return WSOrderbook{}, nil
 }
