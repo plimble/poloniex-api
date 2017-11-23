@@ -1,7 +1,6 @@
 package poloniex
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,22 +10,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/shopspring/decimal"
+	"github.com/chuckpreslar/emission"
 
-	"gopkg.in/beatgammit/turnpike.v2"
+	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 type (
 	//Poloniex describes the API
 	Poloniex struct {
-		Key          string
-		Secret       string
-		ws           *turnpike.Client
-		subscribedTo map[string]bool
-		debug        bool
-		nonce        int64
-		mutex        sync.Mutex
+		Key           string
+		Secret        string
+		ws            *websocket.Conn
+		debug         bool
+		nonce         int64
+		mutex         sync.Mutex
+		emitter       *emission.Emitter
+		subscriptions map[string]bool
 	}
 )
 
@@ -36,57 +36,6 @@ const (
 	// PRIVATEURI is the address of the public API on Poloniex
 	PRIVATEURI = "https://poloniex.com/tradingApi"
 )
-
-//InitWS is an attempt to work around the shitty poloniex WS api connection timeouts
-func (p *Poloniex) InitWS() {
-	if p.ws != nil {
-		return
-	}
-	err := retry(100, 3*time.Second, func() error {
-		t := &tls.Config{InsecureSkipVerify: true}
-		u := "wss://api.poloniex.com"
-		c, err := turnpike.NewWebsocketClient(turnpike.JSON, u, t)
-		if err != nil {
-			log.Println(err)
-			return errors.Wrap(err, "open of websocket connection to "+u+" failed")
-		}
-		_, err = c.JoinRealm("realm1", nil)
-		if err != nil {
-			log.Println(err)
-			return errors.Wrap(err, "joining realm1 failed")
-		}
-		p.ws = c
-		return nil
-	})
-	if err != nil {
-		log.Fatalln(errors.Wrap(err, "retries exhausted, fatal."))
-	}
-	p.subscribedTo = map[string]bool{}
-
-}
-
-func retry(attempts int, sleep time.Duration, callback func() error) (err error) {
-	for i := 0; ; i++ {
-		err = callback()
-		if err == nil {
-			return
-		}
-
-		if i >= (attempts - 1) {
-			break
-		}
-
-		time.Sleep(sleep)
-
-		log.Println("retrying after error:", err)
-	}
-	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
-}
-
-func (p *Poloniex) isSubscribed(code string) bool {
-	_, ok := p.subscribedTo[code]
-	return ok
-}
 
 //Debug turns on debugmode, which basically dumps all responses from the poloniex API REST server
 func (p *Poloniex) Debug() {
@@ -105,6 +54,9 @@ func NewWithCredentials(key, secret string) *Poloniex {
 	p.Secret = secret
 	p.nonce = time.Now().UnixNano()
 	p.mutex = sync.Mutex{}
+	p.emitter = emission.NewEmitter()
+	p.subscriptions = map[string]bool{}
+
 	return p
 }
 
@@ -129,6 +81,8 @@ func NewPublicOnly() *Poloniex {
 	p := &Poloniex{}
 	p.nonce = time.Now().UnixNano()
 	p.mutex = sync.Mutex{}
+	p.emitter = emission.NewEmitter()
+	p.subscriptions = map[string]bool{}
 	return p
 }
 
@@ -146,25 +100,39 @@ func un(s string, startTime time.Time) {
 	log.Printf("trace end: %s, elapsed %f secs\n", s, elapsed.Seconds())
 }
 
-func ToDecimal(i interface{}) decimal.Decimal {
-	maxFloat := decimal.NewFromFloat(math.MaxFloat64)
+func toFloat(i interface{}) float64 {
+	maxFloat := float64(math.MaxFloat64)
 	switch i := i.(type) {
 	case string:
 		a, err := strconv.ParseFloat(i, 64)
 		if err != nil {
 			return maxFloat
 		}
-		return decimal.NewFromFloat(a)
+		return a
 	case float64:
-		return decimal.NewFromFloat(i)
+		return i
 	case int64:
-		return decimal.NewFromFloat(float64(i))
+		return float64(i)
 	case json.Number:
 		a, err := i.Float64()
 		if err != nil {
 			return maxFloat
 		}
-		return decimal.NewFromFloat(a)
+		return a
 	}
 	return maxFloat
+}
+
+func toString(i interface{}) string {
+	switch i := i.(type) {
+	case string:
+		return i
+	case float64:
+		return fmt.Sprintf("%.8f", i)
+	case int64:
+		return fmt.Sprintf("%d", i)
+	case json.Number:
+		return i.String()
+	}
+	return ""
 }
