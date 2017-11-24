@@ -74,7 +74,7 @@ func (p *Poloniex) StartWS() {
 					continue
 				}
 				for _, v := range orderbook {
-					p.Emit(v.Event, v)
+					p.Emit(v.Event, v).Emit(v.Pair, v).Emit(v.Pair+"-"+v.Event, v)
 				}
 			} else if chids == _ChannelIDs["ticker"] {
 				// it's a ticker
