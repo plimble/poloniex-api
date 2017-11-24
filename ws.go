@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"strconv"
-
-	"github.com/k0kubun/pp"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -40,6 +39,14 @@ type (
 	}
 
 	WSOrderbook struct {
+		Pair    string
+		Event   string
+		TradeID int64
+		Type    string
+		Rate    float64
+		Amount  float64
+		Total   float64
+		TS      time.Time
 	}
 )
 
@@ -66,7 +73,9 @@ func (p *Poloniex) StartWS() {
 					log.Println(err)
 					continue
 				}
-				p.Emit("orderbook", orderbook)
+				for _, v := range orderbook {
+					p.Emit(v.Event, v)
+				}
 			} else if chids == _ChannelIDs["ticker"] {
 				// it's a ticker
 				ticker, err := p.parseTicker(message)
@@ -145,13 +154,46 @@ func (p *Poloniex) parseTicker(raw []interface{}) (WSTicker, error) {
 	return wt, nil
 }
 
-func (p *Poloniex) parseOrderbook(raw []interface{}) (WSOrderbook, error) {
-	wo := WSOrderbook{}
+func (p *Poloniex) parseOrderbook(raw []interface{}) ([]WSOrderbook, error) {
+	trades := []WSOrderbook{}
 	marketID := int64(toFloat(raw[0]))
 	pair, ok := p.byID[marketID]
 	if !ok {
-		return wo, errors.New("cannot parse to orderbook - invalid marketID")
+		return trades, errors.New("cannot parse to orderbook - invalid marketID")
 	}
-	pp.Println(pair, marketID)
-	return WSOrderbook{}, nil
+	for _, _v := range raw[2].([]interface{}) {
+		v := _v.([]interface{})
+		trade := WSOrderbook{}
+		trade.Pair = pair
+		switch v[0].(string) {
+		case "i":
+		case "o":
+			trade.Event = "modify"
+			if t := toFloat(v[3]); t == 0.0 {
+				trade.Event = "remove"
+			}
+			trade.Type = "ask"
+			if t := toFloat(v[1]); t == 1.0 {
+				trade.Type = "bid"
+			}
+			trade.Rate = toFloat(v[2])
+			trade.Amount = toFloat(v[3])
+			trade.TS = time.Now()
+		case "t":
+			trade.Event = "trade"
+			trade.TradeID = int64(toFloat(raw[1]))
+			trade.Type = "sell"
+			if t := toFloat(v[2]); t == 1.0 {
+				trade.Type = "buy"
+			}
+			trade.Rate = toFloat(v[3])
+			trade.Amount = toFloat(v[4])
+			trade.Total = trade.Rate * trade.Amount
+			t := time.Unix(int64(toFloat(v[5])), 0)
+			trade.TS = t
+		default:
+		}
+		trades = append(trades, trade)
+	}
+	return trades, nil
 }
