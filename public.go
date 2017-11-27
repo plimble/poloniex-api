@@ -8,24 +8,23 @@ import (
 
 	"github.com/franela/goreq"
 	"github.com/k0kubun/pp"
-	"github.com/shopspring/decimal"
 )
 
 type (
 	Ticker      map[string]TickerEntry
 	TickerEntry struct {
-		Last        decimal.Decimal `json:",string"`
-		Ask         decimal.Decimal `json:"lowestAsk,string"`
-		Bid         decimal.Decimal `json:"highestBid,string"`
-		Change      decimal.Decimal `json:"percentChange,string"`
-		BaseVolume  decimal.Decimal `json:"baseVolume,string"`
-		QuoteVolume decimal.Decimal `json:"quoteVolume,string"`
-		IsFrozen    int64           `json:"isFrozen,string"`
-		ID          int64           `json:"id"`
+		Last        float64 `json:",string"`
+		Ask         float64 `json:"lowestAsk,string"`
+		Bid         float64 `json:"highestBid,string"`
+		Change      float64 `json:"percentChange,string"`
+		BaseVolume  float64 `json:"baseVolume,string"`
+		QuoteVolume float64 `json:"quoteVolume,string"`
+		IsFrozen    int64   `json:"isFrozen,string"`
+		ID          int64   `json:"id"`
 	}
 
 	DailyVolume          map[string]DailyVolumeEntry
-	DailyVolumeEntry     map[string]decimal.Decimal
+	DailyVolumeEntry     map[string]float64
 	DailyVolumeTemp      map[string]interface{}
 	DailyVolumeEntryTemp map[string]interface{}
 
@@ -35,8 +34,8 @@ type (
 		IsFrozen bool
 	}
 	Order struct {
-		Rate   decimal.Decimal
-		Amount decimal.Decimal
+		Rate   float64
+		Amount float64
 	}
 
 	OrderBookTemp struct {
@@ -53,28 +52,28 @@ type (
 		ID     int64 `json:"globalTradeID"`
 		Date   string
 		Type   string
-		Rate   decimal.Decimal `json:",string"`
-		Amount decimal.Decimal `json:",string"`
-		Total  decimal.Decimal `json:",string"`
+		Rate   float64 `json:",string"`
+		Amount float64 `json:",string"`
+		Total  float64 `json:",string"`
 	}
 
 	ChartData      []ChartDataEntry
 	ChartDataEntry struct {
 		Date            int64
-		High            decimal.Decimal
-		Low             decimal.Decimal
-		Open            decimal.Decimal
-		Close           decimal.Decimal
-		Volume          decimal.Decimal
-		QuoteVolume     decimal.Decimal
-		WeightedAverage decimal.Decimal
+		High            float64
+		Low             float64
+		Open            float64
+		Close           float64
+		Volume          float64
+		QuoteVolume     float64
+		WeightedAverage float64
 	}
 
 	Currencies map[string]Currency
 	Currency   struct {
 		Name           string
-		TxFee          decimal.Decimal `json:",string"`
-		MinConf        decimal.Decimal
+		TxFee          float64 `json:",string"`
+		MinConf        float64
 		DepositAddress string
 		Disabled       int64
 		Delisted       int64
@@ -86,10 +85,10 @@ type (
 		Demands []LoanOrder
 	}
 	LoanOrder struct {
-		Rate     decimal.Decimal `json:",string"`
-		Amount   decimal.Decimal `json:",string"`
-		RangeMin decimal.Decimal
-		RangeMax decimal.Decimal
+		Rate     float64 `json:",string"`
+		Amount   float64 `json:",string"`
+		RangeMin float64
+		RangeMax float64
 	}
 )
 
@@ -112,7 +111,7 @@ func (p *Poloniex) DailyVolume() (dailyVolume DailyVolume, err error) {
 		default:
 			v := i.(map[string]interface{})
 			for kk, vv := range v {
-				dve[kk] = ToDecimal(vv)
+				dve[kk] = toFloat(vv)
 			}
 			dailyVolume[k] = dve
 		case string:
@@ -216,15 +215,15 @@ func tempToOrderBook(obt OrderBookTemp) (ob OrderBook) {
 	ob.Bids = []Order{}
 	for k := range asks {
 		v := asks[k]
-		price := ToDecimal(v[0])
-		amount := ToDecimal(v[1])
+		price := toFloat(v[0])
+		amount := toFloat(v[1])
 		o := Order{Rate: price, Amount: amount}
 		ob.Asks = append(ob.Asks, o)
 	}
 	for k := range bids {
 		v := bids[k]
-		price := ToDecimal(v[0])
-		amount := ToDecimal(v[1])
+		price := toFloat(v[0])
+		amount := toFloat(v[1])
 		o := Order{Rate: price, Amount: amount}
 		ob.Bids = append(ob.Bids, o)
 	}

@@ -1,188 +1,199 @@
 package poloniex
 
 import (
-	"bytes"
 	"encoding/json"
 	"log"
 	"strconv"
 	"time"
 
-	"github.com/olekukonko/tablewriter"
+	"github.com/pkg/errors"
+)
 
-	"github.com/k0kubun/pp"
-	"github.com/shopspring/decimal"
-	"gopkg.in/beatgammit/turnpike.v2"
+const (
+	apiURL = "wss://api2.poloniex.com/"
+)
+
+var (
+	_ChannelIDs = map[string]string{
+		"trollbox":  "1001",
+		"ticker":    "1002",
+		"footer":    "1003",
+		"heartbeat": "1010",
+	}
 )
 
 type (
 	//WSTicker describes a ticker item
 	WSTicker struct {
 		Pair          string
-		Last          decimal.Decimal
-		Ask           decimal.Decimal
-		Bid           decimal.Decimal
-		PercentChange decimal.Decimal
-		BaseVolume    decimal.Decimal
-		QuoteVolume   decimal.Decimal
+		Last          float64
+		Ask           float64
+		Bid           float64
+		PercentChange float64
+		BaseVolume    float64
+		QuoteVolume   float64
 		IsFrozen      bool
-		DailyHigh     decimal.Decimal
-		DailyLow      decimal.Decimal
+		DailyHigh     float64
+		DailyLow      float64
+		PairID        int64
 	}
 
-	// WSTickerChan is a onduit through which WSTicker items are sent
-	WSTickerChan chan WSTicker
-
-	//WSTrade describes a trade, a new order, or an order update
-	WSTrade struct {
-		TradeID string
-		Rate    decimal.Decimal `json:",string"`
-		Amount  decimal.Decimal `json:",string"`
+	WSOrderbook struct {
+		Pair    string
+		Event   string
+		TradeID int64
 		Type    string
-		Date    string
+		Rate    float64
+		Amount  float64
+		Total   float64
 		TS      time.Time
 	}
-
-	//WSOrderOrTrade is a slice of WSTrades with an indicator of the type (trade, new order, update order)
-	WSOrderOrTrade struct {
-		Seq    int64
-		Orders WSOrders
-	}
-
-	WSOrders []struct {
-		Data WSTrade
-		Type string
-	}
-
-	// WSOrderOrTradeChan is a onduit through which WSTicker items are sent
-	WSOrderOrTradeChan chan WSOrderOrTrade
 )
 
-const (
-	//SENTINEL is used to mark items without a sequence number
-	SENTINEL = int64(-1)
-)
-
-//SubscribeTicker subscribes to the ticker feed and returns a channel over which it will send updates
-func (p *Poloniex) SubscribeTicker() WSTickerChan {
-	p.InitWS()
-	p.subscribedTo["ticker"] = true
-	ch := make(WSTickerChan)
-	p.ws.Subscribe("ticker", p.makeTickerHandler(ch))
-	return ch
-}
-
-//SubscribeOrder subscribes to the order and trade feed and returns a channel over which it will send updates
-func (p *Poloniex) SubscribeOrder(code string) WSOrderOrTradeChan {
-	p.InitWS()
-	p.subscribedTo[code] = true
-	ch := make(WSOrderOrTradeChan)
-	p.ws.Subscribe(code, p.makeOrderHandler(code, ch))
-	return ch
-}
-
-//UnsubscribeTicker ... I think you can guess
-func (p *Poloniex) UnsubscribeTicker() {
-	p.InitWS()
-	p.Unsubscribe("ticker")
-}
-
-//UnsubscribeOrder ... I think you can guess
-func (p *Poloniex) UnsubscribeOrder(code string) {
-	p.InitWS()
-	p.Unsubscribe(code)
-}
-
-//Unsubscribe from the relevant feed
-func (p *Poloniex) Unsubscribe(code string) {
-	p.InitWS()
-	if p.isSubscribed(code) {
-		delete(p.subscribedTo, code)
-		p.ws.Unsubscribe(code)
-	}
-}
-
-//makeTickerHandler takes a WS Order or Trade and send it over the channel sepcified by the user
-func (p *Poloniex) makeTickerHandler(ch chan WSTicker) turnpike.EventHandler {
-	return func(p []interface{}, n map[string]interface{}) {
-		t := WSTicker{
-			Pair:          p[0].(string),
-			Last:          ToDecimal(p[1]),
-			Ask:           ToDecimal(p[2]),
-			Bid:           ToDecimal(p[3]),
-			PercentChange: ToDecimal(p[4]).Mul(decimal.NewFromFloat(100.0)),
-			BaseVolume:    ToDecimal(p[5]),
-			QuoteVolume:   ToDecimal(p[6]),
-			IsFrozen:      !ToDecimal(p[7]).Equal(decimal.NewFromFloat(0.0)),
-			DailyHigh:     ToDecimal(p[8]),
-			DailyLow:      ToDecimal(p[9]),
-		}
-		ch <- t
-	}
-}
-
-//makeOrderHandler takes a WS Order or Trade and send it over the channel sepcified by the user
-func (p *Poloniex) makeOrderHandler(coin string, ch WSOrderOrTradeChan) turnpike.EventHandler {
-	return func(p []interface{}, n map[string]interface{}) {
-		seq := SENTINEL
-		if s, ok := n["seq"]; ok {
-			if i, err := strconv.Atoi(s.(string)); err == nil {
-				seq = int64(i)
-			} else {
-				seq = SENTINEL
+func (p *Poloniex) StartWS() {
+	go func() {
+		for {
+			_, raw, err := p.ws.ReadMessage()
+			if err != nil {
+				log.Println("read:", err)
+				continue
 			}
-		}
-		b, err := json.Marshal(p)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		oot := WSOrders{}
-		err = json.Unmarshal(b, &oot)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		ootTmp := WSOrders{}
-		for _, o := range oot {
-			if o.Type == "newTrade" {
-				pp.Println("Date:", o.Data.Date)
-				d, err := time.Parse("2006-01-02 15:04:05", o.Data.Date)
+			var message []interface{}
+			err = json.Unmarshal(raw, &message)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			chid := int64(message[0].(float64))
+			chids := toString(chid)
+			if chid > 100.0 && chid < 1000.0 {
+				// it's an orderbook
+				orderbook, err := p.parseOrderbook(message)
 				if err != nil {
 					log.Println(err)
+					continue
 				}
-				o.Data.TS = d
+				for _, v := range orderbook {
+					p.Emit(v.Event, v).Emit(v.Pair, v).Emit(v.Pair+"-"+v.Event, v)
+				}
+			} else if chids == _ChannelIDs["ticker"] {
+				// it's a ticker
+				ticker, err := p.parseTicker(message)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				p.Emit("ticker", ticker)
 			}
-			ootTmp = append(ootTmp, o)
 		}
-		o := WSOrderOrTrade{Seq: seq, Orders: ootTmp}
-		ch <- o
-	}
+	}()
 }
 
-func (w WSTicker) String() string {
-	tf := map[bool]string{true: "True", false: "False"}
-	data := [][]string{
-		[]string{"Pair", w.Pair},
-		[]string{"Last", w.Last.StringFixed(8)},
-		[]string{"Ask", w.Ask.StringFixed(8)},
-		[]string{"Bid", w.Bid.StringFixed(8)},
-		[]string{"PercentChange", w.PercentChange.StringFixed(8)},
-		[]string{"BaseVolume", w.BaseVolume.StringFixed(8)},
-		[]string{"QuoteVolume", w.QuoteVolume.StringFixed(8)},
-		[]string{"IsFrozen", tf[w.IsFrozen]},
-		[]string{"DailyHigh", w.DailyHigh.StringFixed(8)},
-		[]string{"DailyLow", w.DailyLow.StringFixed(8)},
+func (p *Poloniex) Subscribe(chid string) error {
+	ticker, err := p.Ticker()
+	if err != nil {
+		return errors.Wrap(err, "getting ticker for subscribe failed")
 	}
-	buf := bytes.NewBuffer([]byte{})
-	buf.WriteString("poloniex.WSTicker:\n")
-	tbl := tablewriter.NewWriter(buf)
-	tbl.SetHeader([]string{"Field", "Value"})
-	tbl.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_RIGHT})
-	tbl.SetColumnColor(
-		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiGreenColor},
-		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlueColor},
-	)
-	tbl.AppendBulk(data)
-	tbl.Render()
-	return buf.String()
+
+	if c, ok := _ChannelIDs[chid]; ok {
+		chid = c
+	} else if t, ok := ticker[chid]; ok {
+		chid = strconv.Itoa(int(t.ID))
+	} else {
+		return errors.New("unrecognised channelid in subscribe")
+	}
+
+	p.subscriptions[chid] = true
+	message := subscription{Command: "subscribe", Channel: chid}
+	return p.sendWSMessage(message)
+}
+
+func (p *Poloniex) Unsubscribe(chid string) error {
+	ticker, err := p.Ticker()
+	if err != nil {
+		return errors.Wrap(err, "getting ticker for unsubscribe failed")
+	}
+
+	if c, ok := _ChannelIDs[chid]; ok {
+		chid = c
+	} else if t, ok := ticker[chid]; ok {
+		chid = strconv.Itoa(int(t.ID))
+	} else {
+		return errors.New("unrecognised channelid in unsubscribe")
+	}
+	message := subscription{Command: "subscribe", Channel: chid}
+	delete(p.subscriptions, chid)
+	return p.sendWSMessage(message)
+}
+
+func (p *Poloniex) parseTicker(raw []interface{}) (WSTicker, error) {
+	wt := WSTicker{}
+	var rawInner []interface{}
+	if len(raw) <= 2 {
+		return wt, errors.New("cannot parse to ticker")
+	}
+	rawInner = raw[2].([]interface{})
+	marketID := int64(toFloat(rawInner[0]))
+	pair, ok := p.byID[marketID]
+	if !ok {
+		return wt, errors.New("cannot parse to ticker - invalid marketID")
+	}
+
+	wt.Pair = pair
+	wt.PairID = marketID
+	wt.Last = toFloat(rawInner[1])
+	wt.Ask = toFloat(rawInner[2])
+	wt.Bid = toFloat(rawInner[3])
+	wt.PercentChange = toFloat(rawInner[4])
+	wt.BaseVolume = toFloat(rawInner[5])
+	wt.QuoteVolume = toFloat(rawInner[6])
+	wt.IsFrozen = toFloat(rawInner[7]) != 0.0
+	wt.DailyHigh = toFloat(rawInner[8])
+	wt.DailyLow = toFloat(rawInner[9])
+
+	return wt, nil
+}
+
+func (p *Poloniex) parseOrderbook(raw []interface{}) ([]WSOrderbook, error) {
+	trades := []WSOrderbook{}
+	marketID := int64(toFloat(raw[0]))
+	pair, ok := p.byID[marketID]
+	if !ok {
+		return trades, errors.New("cannot parse to orderbook - invalid marketID")
+	}
+	for _, _v := range raw[2].([]interface{}) {
+		v := _v.([]interface{})
+		trade := WSOrderbook{}
+		trade.Pair = pair
+		switch v[0].(string) {
+		case "i":
+		case "o":
+			trade.Event = "modify"
+			if t := toFloat(v[3]); t == 0.0 {
+				trade.Event = "remove"
+			}
+			trade.Type = "ask"
+			if t := toFloat(v[1]); t == 1.0 {
+				trade.Type = "bid"
+			}
+			trade.Rate = toFloat(v[2])
+			trade.Amount = toFloat(v[3])
+			trade.TS = time.Now()
+		case "t":
+			trade.Event = "trade"
+			trade.TradeID = int64(toFloat(raw[1]))
+			trade.Type = "sell"
+			if t := toFloat(v[2]); t == 1.0 {
+				trade.Type = "buy"
+			}
+			trade.Rate = toFloat(v[3])
+			trade.Amount = toFloat(v[4])
+			trade.Total = trade.Rate * trade.Amount
+			t := time.Unix(int64(toFloat(v[5])), 0)
+			trade.TS = t
+		default:
+		}
+		trades = append(trades, trade)
+	}
+	return trades, nil
 }
