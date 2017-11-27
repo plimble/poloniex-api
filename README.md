@@ -79,13 +79,19 @@ import (
 )
 
 func main() {
-    p := poloniex.NewWithCredentials("Key goes here", "secret goes here")
-    log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	p := poloniex.NewWithCredentials("Key goes here", "secret goes here")
+	p.Subscribe("ticker")
+	p.Subscribe("USDT_BTC")
 
-    ch := p.SubscribeOrder("BTC_ETH")
-    for orders := range ch {
-        pp.Println(orders)
-    }
+	p.On("ticker", func(m poloniex.WSTicker) {
+		pp.Println(m)
+	}).On("USDT_BTC-trade", func(m poloniex.WSOrderbook) {
+		pp.Println(m)
+	})
+
+	for _ = range time.Tick(1 * time.Second) {
+
+	}
 }
 
 ```
