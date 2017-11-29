@@ -1,9 +1,8 @@
 package poloniex
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -11,15 +10,6 @@ import (
 
 const (
 	apiURL = "wss://api2.poloniex.com/"
-)
-
-var (
-	_ChannelIDs = map[string]string{
-		"trollbox":  "1001",
-		"ticker":    "1002",
-		"footer":    "1003",
-		"heartbeat": "1010",
-	}
 )
 
 type (
@@ -48,20 +38,17 @@ type (
 		Total   float64
 		TS      time.Time
 	}
+
+	WSReportFunc = func(time.Time)
 )
 
 func (p *Poloniex) StartWS() {
 	go func() {
 		for {
-			_, raw, err := p.ws.ReadMessage()
+			message := []interface{}{}
+			err := p.ws.ReadJSON(&message)
 			if err != nil {
 				log.Println("read:", err)
-				continue
-			}
-			var message []interface{}
-			err = json.Unmarshal(raw, &message)
-			if err != nil {
-				log.Println(err)
 				continue
 			}
 			chid := int64(message[0].(float64))
@@ -76,11 +63,11 @@ func (p *Poloniex) StartWS() {
 				for _, v := range orderbook {
 					p.Emit(v.Event, v).Emit(v.Pair, v).Emit(v.Pair+"-"+v.Event, v)
 				}
-			} else if chids == _ChannelIDs["ticker"] {
+			} else if chids == p.ByName["ticker"] {
 				// it's a ticker
 				ticker, err := p.parseTicker(message)
 				if err != nil {
-					log.Println(err)
+					log.Printf("%s: (%s)\n", err, message)
 					continue
 				}
 				p.Emit("ticker", ticker)
@@ -90,15 +77,11 @@ func (p *Poloniex) StartWS() {
 }
 
 func (p *Poloniex) Subscribe(chid string) error {
-	ticker, err := p.Ticker()
-	if err != nil {
-		return errors.Wrap(err, "getting ticker for subscribe failed")
-	}
 
-	if c, ok := _ChannelIDs[chid]; ok {
+	if c, ok := p.ByName[chid]; ok {
 		chid = c
-	} else if t, ok := ticker[chid]; ok {
-		chid = strconv.Itoa(int(t.ID))
+	} else if c, ok := p.ByID[chid]; ok {
+		chid = c
 	} else {
 		return errors.New("unrecognised channelid in subscribe")
 	}
@@ -109,17 +92,12 @@ func (p *Poloniex) Subscribe(chid string) error {
 }
 
 func (p *Poloniex) Unsubscribe(chid string) error {
-	ticker, err := p.Ticker()
-	if err != nil {
-		return errors.Wrap(err, "getting ticker for unsubscribe failed")
-	}
-
-	if c, ok := _ChannelIDs[chid]; ok {
+	if c, ok := p.ByName[chid]; ok {
 		chid = c
-	} else if t, ok := ticker[chid]; ok {
-		chid = strconv.Itoa(int(t.ID))
+	} else if c, ok := p.ByID[chid]; ok {
+		chid = c
 	} else {
-		return errors.New("unrecognised channelid in unsubscribe")
+		return errors.New("unrecognised channelid in subscribe")
 	}
 	message := subscription{Command: "subscribe", Channel: chid}
 	delete(p.subscriptions, chid)
@@ -134,7 +112,7 @@ func (p *Poloniex) parseTicker(raw []interface{}) (WSTicker, error) {
 	}
 	rawInner = raw[2].([]interface{})
 	marketID := int64(toFloat(rawInner[0]))
-	pair, ok := p.byID[marketID]
+	pair, ok := p.ByID[fmt.Sprintf("%d", marketID)]
 	if !ok {
 		return wt, errors.New("cannot parse to ticker - invalid marketID")
 	}
@@ -157,7 +135,7 @@ func (p *Poloniex) parseTicker(raw []interface{}) (WSTicker, error) {
 func (p *Poloniex) parseOrderbook(raw []interface{}) ([]WSOrderbook, error) {
 	trades := []WSOrderbook{}
 	marketID := int64(toFloat(raw[0]))
-	pair, ok := p.byID[marketID]
+	pair, ok := p.ByID[fmt.Sprintf("%d", marketID)]
 	if !ok {
 		return trades, errors.New("cannot parse to orderbook - invalid marketID")
 	}
@@ -196,4 +174,12 @@ func (p *Poloniex) parseOrderbook(raw []interface{}) ([]WSOrderbook, error) {
 		trades = append(trades, trade)
 	}
 	return trades, nil
+}
+
+func (p *Poloniex) WSIdle(dur time.Duration, callbacks ...WSReportFunc) {
+	for t := range time.Tick(dur) {
+		for _, cb := range callbacks {
+			cb(t)
+		}
+	}
 }
