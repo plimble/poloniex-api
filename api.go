@@ -29,8 +29,8 @@ type (
 		mutex         sync.Mutex
 		emitter       *emission.Emitter
 		subscriptions map[string]bool
-		byID          map[int64]string
-		byName        map[string]int64
+		ByID          map[string]string
+		ByName        map[string]string
 	}
 )
 
@@ -61,8 +61,7 @@ func NewWithCredentials(key, secret string) *Poloniex {
 	p.emitter = emission.NewEmitter()
 	p.subscriptions = map[string]bool{}
 	p.ws = recws.RecConn{}
-	h := http.Header{}
-	p.ws.Dial(apiURL, h)
+	p.ws.Dial(apiURL, http.Header{})
 	p.getMarkets()
 
 	return p
@@ -92,8 +91,7 @@ func NewPublicOnly() *Poloniex {
 	p.emitter = emission.NewEmitter()
 	p.subscriptions = map[string]bool{}
 	p.ws = recws.RecConn{}
-	h := http.Header{}
-	p.ws.Dial(apiURL, h)
+	p.ws.Dial(apiURL, http.Header{})
 	p.getMarkets()
 	return p
 }
@@ -108,14 +106,26 @@ func (p *Poloniex) getMarkets() {
 	if err != nil {
 		log.Fatalln("error getting markets for lookups", err)
 	}
-	byName := map[string]int64{}
-	byID := map[int64]string{}
+	ByName := map[string]string{}
+	ByID := map[string]string{}
 	for k, v := range markets {
-		byName[k] = v.ID
-		byID[v.ID] = k
+		id := fmt.Sprintf("%d", v.ID)
+		ByName[k] = id
+		ByID[id] = k
 	}
-	p.byID = byID
-	p.byName = byName
+
+	ByID["1001"] = "trollbox"
+	ByID["1002"] = "ticker"
+	ByID["1003"] = "footer"
+	ByID["1010"] = "heartbeat"
+
+	ByName["trollbox"] = "1001"
+	ByName["ticker"] = "1002"
+	ByName["footer"] = "1003"
+	ByName["heartbeat"] = "1010"
+
+	p.ByID = ByID
+	p.ByName = ByName
 }
 
 func trace(s string) (string, time.Time) {
