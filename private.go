@@ -312,6 +312,16 @@ func (p *Poloniex) BuyPostOnly(pair string, rate, amount float64) (buy Buy, err 
 	return
 }
 
+func (p *Poloniex) BuyFillKill(pair string, rate, amount float64) (buy Buy, err error) {
+	params := url.Values{}
+	params.Add("currencyPair", pair)
+	params.Add("rate", fmt.Sprintf("%.8f", rate))
+	params.Add("amount", fmt.Sprintf("%.8f", amount))
+	params.Add("fillOrKill", "1")
+	err = p.private("buy", params, &buy)
+	return
+}
+
 func (p *Poloniex) Sell(pair string, rate, amount float64) (sell Sell, err error) {
 	params := url.Values{}
 	params.Add("currencyPair", pair)
@@ -327,6 +337,16 @@ func (p *Poloniex) SellPostOnly(pair string, rate, amount float64) (sell Sell, e
 	params.Add("rate", fmt.Sprintf("%.8f", rate))
 	params.Add("amount", fmt.Sprintf("%.8f", amount))
 	params.Add("postOnly", "1")
+	err = p.private("sell", params, &sell)
+	return
+}
+
+func (p *Poloniex) SellFillKill(pair string, rate, amount float64) (sell Sell, err error) {
+	params := url.Values{}
+	params.Add("currencyPair", pair)
+	params.Add("rate", fmt.Sprintf("%.8f", rate))
+	params.Add("amount", fmt.Sprintf("%.8f", amount))
+	params.Add("fillOrKill", "1")
 	err = p.private("sell", params, &sell)
 	return
 }
