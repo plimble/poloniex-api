@@ -175,12 +175,17 @@ func (p *Poloniex) ChartData(pair string) (chartData ChartData, err error) {
 	return
 }
 
-func (p *Poloniex) ChartDataPeriod(pair string, start, end time.Time) (chartData ChartData, err error) {
+func (p *Poloniex) ChartDataPeriod(pair string, start, end time.Time, period ...int) (chartData ChartData, err error) {
 	params := url.Values{}
 	params.Add("currencyPair", pair)
 	params.Add("start", fmt.Sprintf("%d", start.Unix()))
 	params.Add("end", fmt.Sprintf("%d", end.Unix()))
-	params.Add("period", "300")
+	pi := 300
+	if len(period) > 0 {
+		pi = period[0]
+	}
+	ps := fmt.Sprintf("%d", pi)
+	params.Add("period", ps)
 	err = p.public("returnChartData", params, &chartData)
 	return
 }
