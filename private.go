@@ -86,12 +86,13 @@ type (
 
 	PrivateTradeHistory      []PrivateTradeHistoryEntry
 	PrivateTradeHistoryEntry struct {
-		Date        string
-		Rate        float64 `json:",string"`
-		Amount      float64 `json:",string"`
-		Total       float64 `json:",string"`
-		OrderNumber int64   `json:",string"`
-		Type        string
+		Date          string
+		Rate          float64 `json:",string"`
+		Amount        float64 `json:",string"`
+		Total         float64 `json:",string"`
+		OrderNumber   int64   `json:",string"`
+		Type          string
+		GlobalTradeID int64 `json:"globalTradeID"`
 	}
 	PrivateTradeHistoryAll map[string]PrivateTradeHistory
 
@@ -263,15 +264,33 @@ func (p *Poloniex) OpenOrdersAll() (openOrders OpenOrdersAll, err error) {
 	return
 }
 
-func (p *Poloniex) PrivateTradeHistory(pair string) (history PrivateTradeHistory, err error) {
+//PrivateTradeHistory takes a string pair and 2 unix timestamps as the start and end date period for the request.
+func (p *Poloniex) PrivateTradeHistory(in ...interface{}) (history PrivateTradeHistory, err error) {
 	params := url.Values{}
-	params.Add("currencyPair", pair)
+	params.Add("currencyPair", in[0].(string))
+	if len(in) > 1 {
+		// we have a start date
+		params.Add("start", fmt.Sprintf("%d", in[1].(int64)))
+	}
+	if len(in) > 2 {
+		// we have an end date
+		params.Add("end", fmt.Sprintf("%d", in[2].(int64)))
+	}
 	err = p.private("returnTradeHistory", params, &history)
 	return
 }
 
-func (p *Poloniex) PrivateTradeHistoryAll() (history PrivateTradeHistoryAll, err error) {
+//PrivateTradeHistoryAll takes 2 unix timestamps as the start and end date period for the request.
+func (p *Poloniex) PrivateTradeHistoryAll(in ...interface{}) (history PrivateTradeHistoryAll, err error) {
 	params := url.Values{}
+	if len(in) > 0 {
+		// we have a start date
+		params.Add("start", fmt.Sprintf("%d", in[0].(int64)))
+	}
+	if len(in) > 1 {
+		// we have an end date
+		params.Add("end", fmt.Sprintf("%d", in[1].(int64)))
+	}
 	params.Add("currencyPair", "all")
 	err = p.private("returnTradeHistory", params, &history)
 	return
@@ -537,8 +556,16 @@ func (p *Poloniex) private(method string, params url.Values, retval interface{})
 	if strings.HasPrefix(s, "[") {
 		// poloniex only ever returns an array type when there is no real data
 		// e.g. no data in a time range
-		// if this ever changes then this breaks
+		// if this ever changes then this breaks badly
 		return nil
+	}
+
+	// do we have an error message from the server?
+	perr := PoloniexError{}
+	err = json.Unmarshal([]byte(s), &perr)
+	if err == nil {
+		// looks like we have an error from poloniex
+		return fmt.Errorf(perr.Error)
 	}
 
 	err = json.Unmarshal([]byte(s), retval)
