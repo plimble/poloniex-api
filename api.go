@@ -32,6 +32,10 @@ type (
 		ByID          map[string]string
 		ByName        map[string]string
 	}
+
+	PoloniexError struct {
+		Error string `json:"error"`
+	}
 )
 
 const (
