@@ -30,7 +30,7 @@ import (
     "log"
 
     "github.com/k0kubun/pp"
-    poloniex "gitlab.com/wmlph/poloniex-api"
+    "github.com/pharrisee/poloniex-api"
 )
 
 func main() {
@@ -52,7 +52,7 @@ import (
     "fmt"
     "log"
 
-    "gitlab.com/wmlph/poloniex-api"
+    "github.com/pharrisee/poloniex-api"
 )
 
 func main() {
