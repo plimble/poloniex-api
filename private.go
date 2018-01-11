@@ -208,8 +208,8 @@ type (
 )
 
 func (p *Poloniex) Balances() (balances Balances, err error) {
-	p.private("returnCompleteBalances", nil, &balances)
-	return
+	err = p.private("returnCompleteBalances", nil, &balances)
+	return balances, err
 }
 
 func (p *Poloniex) AccountBalances() (balances AccountBalances, err error) {
@@ -563,7 +563,7 @@ func (p *Poloniex) private(method string, params url.Values, retval interface{})
 	// do we have an error message from the server?
 	perr := PoloniexError{}
 	err = json.Unmarshal([]byte(s), &perr)
-	if err == nil {
+	if err == nil && perr.Error != "" {
 		// looks like we have an error from poloniex
 		return fmt.Errorf(perr.Error)
 	}
