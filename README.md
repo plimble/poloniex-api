@@ -126,5 +126,5 @@ Subscribing to USDT_BTC will lead to these events being emitted.
 
 This gives flexibility when writing the event handlers, meaning that you could for example have one routing which sends all trades for all markets to a local database for later processing.
 
-
+see https://poloniex.com/support/api/ for a fuller description of the event types.
 
