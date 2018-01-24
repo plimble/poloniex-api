@@ -281,15 +281,15 @@ func (p *Poloniex) PrivateTradeHistory(pair string, dates ...int64) (history Pri
 }
 
 //PrivateTradeHistoryAll takes 2 unix timestamps as the start and end date period for the request.
-func (p *Poloniex) PrivateTradeHistoryAll(in ...interface{}) (history PrivateTradeHistoryAll, err error) {
+func (p *Poloniex) PrivateTradeHistoryAll(dates ...int64) (history PrivateTradeHistoryAll, err error) {
 	params := url.Values{}
-	if len(in) > 0 {
+	if len(dates) > 0 {
 		// we have a start date
-		params.Add("start", fmt.Sprintf("%d", in[0].(int64)))
+		params.Add("start", fmt.Sprintf("%d", dates[0]))
 	}
-	if len(in) > 1 {
+	if len(dates) > 1 {
 		// we have an end date
-		params.Add("end", fmt.Sprintf("%d", in[1].(int64)))
+		params.Add("end", fmt.Sprintf("%d", dates[1]))
 	}
 	params.Add("currencyPair", "all")
 	err = p.private("returnTradeHistory", params, &history)
