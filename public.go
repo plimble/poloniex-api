@@ -159,7 +159,7 @@ func (p *Poloniex) TradeHistory(pair string, dates ...int64) (tradeHistory Trade
 	}
 	if len(dates) > 1 {
 		// we have an end date
-		params.Add("end", fmt.Sprintf("%d", dates[2]))
+		params.Add("end", fmt.Sprintf("%d", dates[1]))
 	}
 	err = p.public("returnTradeHistory", params, &tradeHistory)
 	return
