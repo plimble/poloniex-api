@@ -100,15 +100,13 @@ func main() {
 When subscribing to an event stream there are a few input types, and strangely more output types.
 
 ### Ticker 
-Subscribe to **_ticker_** event
-
-#### Emitted event
+event name: _ticker_
 
 Sends ticker updates when any of currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume, quoteVolume, isFrozen, 24hrHigh or 24hrLow changes for any market.
 
 You are required to filter which markets you are interested in.
 
-#### Market_Name
+### Market_Name
 
 Subscribing to an orderbook change stream can be confusing (both to think about and describe), since a single subscription can lead to multiple event streams being created.
 
