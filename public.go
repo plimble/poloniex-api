@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	simplejson "github.com/bitly/go-simplejson"
 	"github.com/franela/goreq"
 	"github.com/k0kubun/pp"
 )
@@ -260,9 +261,23 @@ func (p *Poloniex) public(command string, params url.Values, retval interface{})
 	if err != nil {
 		return
 	}
+	sByte := []byte(s)
+
 	if p.debug {
 		pp.Println(s)
 	}
-	err = json.Unmarshal([]byte(s), retval)
-	return
+
+	jsonData, err := simplejson.NewJson(sByte)
+	if err != nil {
+		return err
+	}
+
+	// do we have an error message from the server?
+	jsonErr, ok := jsonData.CheckGet("error")
+	if ok {
+		// looks like we have an error from poloniex
+		return fmt.Errorf(jsonErr.MustString())
+	}
+
+	return json.Unmarshal([]byte(s), retval)
 }

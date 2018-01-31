@@ -9,9 +9,9 @@ import (
 	"log"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
+	"github.com/bitly/go-simplejson"
 	"github.com/franela/goreq"
 )
 
@@ -547,28 +547,25 @@ func (p *Poloniex) private(method string, params url.Values, retval interface{})
 	if err != nil {
 		return err
 	}
+	sByte := []byte(s)
 
 	if p.debug {
 		fmt.Println(s)
 	}
 
-	// TODO: fix this shit, it's really crappy.
-	if strings.HasPrefix(s, "[") {
-		// poloniex only ever returns an array type when there is no real data
-		// e.g. no data in a time range
-		// if this ever changes then this breaks badly
-		return nil
+	jsonData, err := simplejson.NewJson(sByte)
+	if err != nil {
+		return err
 	}
 
 	// do we have an error message from the server?
-	perr := PoloniexError{}
-	err = json.Unmarshal([]byte(s), &perr)
-	if err == nil && perr.Error != "" {
+	jsonErr, ok := jsonData.CheckGet("error")
+	if ok {
 		// looks like we have an error from poloniex
-		return fmt.Errorf(perr.Error)
+		return fmt.Errorf(jsonErr.MustString())
 	}
 
-	err = json.Unmarshal([]byte(s), retval)
+	err = json.Unmarshal(sByte, retval)
 	if err != nil && retval == nil {
 		log.Println(err)
 		return err
